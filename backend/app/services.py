@@ -240,6 +240,7 @@ def criar_remessa(db: Session, entrada: RemessaEntrada):
 def remessa_saida(r: Remessa):
     return {"id": r.id, "localidade_id": r.localidade_id, "destino": r.localidade.nome,
             "origem_expedicao": r.origem_expedicao, "status": r.status, "nf": r.nf,
+            "nf_arquivo": r.documento_nf.nome if r.documento_nf else None,
             "nf_solicitada_em": r.nf_solicitada_em, "data_entrega_logistica": r.data_entrega_logistica,
             "observacoes": r.observacoes, "criado_em": r.criado_em,
             "itens": [{"item_id": ri.item_id, "projeto_id": ri.item.projeto_id,

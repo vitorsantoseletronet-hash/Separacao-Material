@@ -1,7 +1,7 @@
 from datetime import date, datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
+from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Integer, JSON, LargeBinary, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -78,6 +78,15 @@ class Remessa(Base):
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     localidade: Mapped[Localidade] = relationship()
     itens: Mapped[list["RemessaItem"]] = relationship(order_by="RemessaItem.item_id")
+    documento_nf: Mapped["DocumentoNF | None"] = relationship(uselist=False)
+
+
+class DocumentoNF(Base):
+    __tablename__ = "api_documentos_nf"
+    remessa_id: Mapped[str] = mapped_column(ForeignKey("api_remessas.id"), primary_key=True)
+    nome: Mapped[str] = mapped_column(Text)
+    conteudo: Mapped[bytes] = mapped_column(LargeBinary, deferred=True)
+    criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
 class RemessaItem(Base):

@@ -6,7 +6,7 @@ export interface Project { id: string; codigo: string; arquivo: string; paginas:
 export interface Group { localidade_id: string | null; destino: string; itens: Item[] }
 export type ShipmentStatus = 'rascunho' | 'nf_solicitada' | 'nf_registrada' | 'entregue_logistica' | 'cancelada' | 'legado_revisar'
 export const shipmentLabels: Record<ShipmentStatus, string> = { rascunho: 'Rascunho', nf_solicitada: 'NF solicitada', nf_registrada: 'NF registrada', entregue_logistica: 'Entregue à logística', cancelada: 'Cancelada', legado_revisar: 'Conferir legado' }
-export interface Shipment { id: string; localidade_id: string; destino: string; origem_expedicao: string; status: ShipmentStatus; nf: string; data_entrega_logistica: string | null; criado_em: string; observacoes: string; itens: { item_id: string; codigo_projeto: string; descricao: string; quantidade: number; serial: string }[] }
+export interface Shipment { id: string; localidade_id: string; destino: string; origem_expedicao: string; status: ShipmentStatus; nf: string; nf_arquivo?: string | null; data_entrega_logistica: string | null; criado_em: string; observacoes: string; itens: { item_id: string; codigo_projeto: string; descricao: string; quantidade: number; serial: string }[] }
 export interface DraftItem extends Omit<ItemInput, 'quantidade'> { quantidade: number | null; revisao?: string }
 export interface Extraction { codigo: string; arquivo: string; paginas: number; metodo: string; aviso: string; itens: DraftItem[]; imagem_png: string | null }
 export const emptyItem = (): ItemInput => ({ destino: '', descricao: '', quantidade: 1, status: 'nao_separado', local_origem: '', tipo: '', serial: '', origem: '', responsavel: '', acao: '', observacoes: '' })

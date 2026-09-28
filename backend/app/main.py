@@ -2,14 +2,14 @@ from contextlib import asynccontextmanager
 from datetime import date
 import os
 
-from fastapi import Depends, FastAPI, HTTPException, File, UploadFile
+from fastapi import Depends, FastAPI, HTTPException, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError, OperationalError
 
 from .db import make_engine, session_factory
-from .models import Localidade, now
+from .models import DocumentoNF, Localidade, now
 from .schemas import (CORES, EntregaEntrada, ItemEntrada, NFEntrada, ProjetoEdicao,
                       ProjetoEntrada, RemessaEntrada, StatusItem, ReconciliacaoEntrada)
 from . import services as s
@@ -145,8 +145,57 @@ def create_app(engine=None):
         r = s.carregar_remessa(db, id, lock=True)
         if r.status not in ("rascunho", "nf_solicitada", "nf_registrada"):
             raise HTTPException(409, "Esta remessa não permite alteração da NF.")
+        if r.documento_nf and r.nf != data.nf:
+            raise HTTPException(409, "Esta NF possui um PDF vinculado; o número não pode ser alterado.")
         r.nf, r.status = data.nf, "nf_registrada"
         return s.remessa_saida(r)
+
+    @app.post("/remessas/{id}/nf/pdf")
+    def attach_invoice(id: str, nf: str = Form(..., min_length=1, max_length=100),
+                       arquivo: UploadFile = File(...), db=Depends(session, scope="function")):
+        import pypdfium2 as pdfium
+        from pathlib import Path
+        try:
+            conteudo = arquivo.file.read(30 * 1024 * 1024 + 1)
+            nome = Path((arquivo.filename or "").replace("\\", "/")).name
+        finally:
+            arquivo.file.close()
+        nf = nf.strip()
+        if not nf:
+            raise HTTPException(422, "Informe o número da NF.")
+        if len(conteudo) > 30 * 1024 * 1024:
+            raise HTTPException(413, "O PDF deve ter no máximo 30 MB.")
+        if not nome.lower().endswith(".pdf") or not conteudo.startswith(b"%PDF-"):
+            raise HTTPException(422, "Selecione uma nota fiscal em PDF válido.")
+        try:
+            with pdfium.PdfDocument(conteudo) as pdf:
+                if not len(pdf):
+                    raise ValueError("PDF sem páginas")
+        except Exception as exc:
+            raise HTTPException(422, "Não foi possível abrir o PDF. Confira se está íntegro e sem senha.") from exc
+        r = s.carregar_remessa(db, id, lock=True)
+        if r.status not in ("rascunho", "nf_solicitada", "nf_registrada", "entregue_logistica"):
+            raise HTTPException(409, "Esta remessa não permite anexar NF.")
+        if r.nf and r.nf != nf:
+            raise HTTPException(409, "O número informado não corresponde à NF desta remessa.")
+        if r.documento_nf:
+            raise HTTPException(409, "Esta remessa já possui um PDF de NF vinculado.")
+        r.documento_nf = DocumentoNF(nome=nome, conteudo=conteudo)
+        r.nf = nf
+        if r.status != "entregue_logistica":
+            r.status = "nf_registrada"
+        db.flush()
+        return s.remessa_saida(r)
+
+    @app.get("/remessas/{id}/nf/pdf")
+    def download_invoice(id: str, db=Depends(session, scope="function")):
+        documento = db.get(DocumentoNF, id)
+        if documento is None:
+            raise HTTPException(404, "Esta remessa não possui PDF de NF.")
+        from urllib.parse import quote
+        return Response(documento.conteudo, media_type="application/pdf", headers={
+            "Content-Disposition": "inline; filename*=UTF-8''" + quote(documento.nome, safe=""),
+            "X-Content-Type-Options": "nosniff"})
 
     @app.post("/remessas/{id}/entregar-logistica")
     def deliver(id: str, data: EntregaEntrada, db=Depends(session, scope="function")):

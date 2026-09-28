@@ -58,6 +58,10 @@ Esta etapa não tem autenticação; a disponibilização para outros usuários e
 
 Requer um servidor PostgreSQL. A partir da raiz:
 
+A API e o Alembic carregam automaticamente o `.env` da raiz. Configure nele
+`DATABASE_URL` com as credenciais e o nome do banco local. Variáveis já definidas
+no ambiente têm prioridade sobre o arquivo.
+
 ```powershell
 python -m venv .venv-api
 .\.venv-api\Scripts\Activate.ps1
@@ -190,3 +194,18 @@ defina `TEST_DATABASE_URL` apontando para um banco
 
 Não use `docker compose down -v` para parar o aplicativo: essa opção remove os volumes.
 Use `docker compose down`; faça backup do banco antes de alterações operacionais.
+
+## PDF da nota fiscal
+
+Em **Remessas e notas fiscais → Anexar NF em PDF**, informe o número da nota,
+selecione o PDF (até 30 MB) e escolha o envio correspondente. O número é informado
+manualmente; não há leitura automática dos dados fiscais. O seletor mostra envios
+com o mesmo número ou ainda sem NF. Confira destino e projetos, pois números podem
+se repetir entre emissores e séries.
+
+O PDF fica no PostgreSQL, vinculado explicitamente à remessa, e pode ser aberto
+pelo botão **Abrir NF em PDF**. Não substitui anexos existentes nem permite mudar
+o número após anexar. Envios já entregues podem receber o PDF sem alterar a entrega.
+
+Rotas: `POST /remessas/{id}/nf/pdf` (multipart: `nf`, `arquivo`) e
+`GET /remessas/{id}/nf/pdf`. Execute as migrações antes de iniciar a nova versão.

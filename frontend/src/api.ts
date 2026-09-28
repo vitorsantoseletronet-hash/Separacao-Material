@@ -9,6 +9,9 @@ export async function request<T>(path: string, method = 'GET', body?: unknown, s
   }
   const data = await response.json().catch(() => null)
   if (!response.ok) {
+    if (data === null && [500, 502, 503, 504].includes(response.status)) {
+      throw new Error('O servidor da API está indisponível ou não respondeu corretamente. Confira se o backend está em execução na porta 8000 e tente novamente.')
+    }
     const detail = data?.detail
     const message = Array.isArray(detail) ? detail.map((e: {loc?: string[]; msg?: string}) => `${e.loc?.slice(1).join('.')}: ${e.msg}`).join('; ') : detail
     throw new Error(typeof message === 'string' ? message : 'Não foi possível concluir a operação. Tente novamente.')
