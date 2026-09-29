@@ -209,3 +209,17 @@ o número após anexar. Envios já entregues podem receber o PDF sem alterar a e
 
 Rotas: `POST /remessas/{id}/nf/pdf` (multipart: `nf`, `arquivo`) e
 `GET /remessas/{id}/nf/pdf`. Execute as migrações antes de iniciar a nova versão.
+
+## Importação da Material.xlsx
+
+`python -m backend.app.migrate_material CAMINHO_DO_SNAPSHOT.json` simula a
+importação da aba Envio; `--apply` confirma a transação. O snapshot contém
+`arquivo`, `aba` e `linhas`, cada uma com `linha`, oito `valores` (PSC, envio,
+destino, item, serial, tamanho, responsável, NF) e oito `cores` com `type`,
+`value`, `tint` e `pattern`. Deve ser extraído da planilha com valores calculados.
+
+Os dados originais e cores ficam em `api_importacoes_legadas`. A importação
+não sobrescreve projetos existentes, e repetir o mesmo conteúdo não duplica.
+Códigos preservam ano e revisão. Quantidades não explícitas ficam para revisão.
+Envios históricos ficam em `legado_revisar`; a data original é preservada em
+observações, pois não confirma a data de entrega à logística.

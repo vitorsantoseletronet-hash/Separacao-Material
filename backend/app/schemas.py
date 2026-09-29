@@ -11,10 +11,15 @@ def texto_chave(value: str) -> str:
 
 
 def codigo_projeto(value: str) -> str:
-    match = re.fullmatch(r"(PSC|PS)[\s:_/#.\-]*(\d{1,12})", value.strip(), re.I)
+    match = re.fullmatch(r"(PSC|PS)[\s:_/#.\-]*(\d{1,12})(?:([/-])(\d{2,4}))?(?:\s+rev\s*(\d+(?:\.\d+)*))?", value.strip(), re.I)
     if not match:
         raise ValueError("Informe o código PS ou PSC seguido do número, por exemplo PSC 2103.")
-    return f"{match[1].upper()} {int(match[2])}"
+    suffix = f"{match[3]}{match[4]}" if match[3] else ""
+    revision = f" REV {match[5]}" if match[5] else ""
+    result = f"{match[1].upper()} {int(match[2])}{suffix}{revision}"
+    if len(result) > 40:
+        raise ValueError("Código do projeto excede 40 caracteres.")
+    return result
 
 
 class StatusItem(str, Enum):
